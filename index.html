@@ -29,6 +29,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- KaTeX renders the metric equations written as \( … \) and \[ … \]. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body,{delimiters:[{left:'\\[',right:'\\]',display:true},{left:'\\(',right:'\\)',display:false}],ignoredTags:['script','noscript','style','textarea','pre','code']})"></script>
   <style>
     :root { --ink:#142033; --muted:#5c687b; --line:#e5eaf1; --paper:#fff; --soft:#f5f7fb; --accent:#4968e8; --accent2:#16a6a1; }
     html { scroll-behavior:smooth; scroll-padding-top:82px; }
@@ -74,27 +79,40 @@
     tr:last-child td { border-bottom:0; }
     .pill { display:inline-block; border-radius:99px; padding:.3rem .6rem; background:#eef1ff; color:#4057bd; font-weight:700; font-size:.76rem; margin:.2rem .2rem .2rem 0; }
 
-    /* Responsive SVG research-figure gallery. */
-    .paper-figure-group { margin-top:2.15rem; }
-    .paper-figure-group-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
-    .paper-figure-group-heading h3 { margin:0; font-size:1.18rem; font-weight:850; letter-spacing:-.025em; }
-    .paper-figure-group-heading p { margin:.3rem 0 0; color:var(--muted); font-size:.89rem; line-height:1.65; }
-    .paper-figure-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.25rem; margin-top:1.15rem; align-items:stretch; }
-    .paper-figure-card { display:flex; flex-direction:column; min-width:0; margin:0; overflow:hidden; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 7px 24px rgba(20,32,51,.045); transition:transform .18s ease,box-shadow .18s ease; }
-    .paper-figure-card:hover { transform:translateY(-2px); box-shadow:0 13px 30px rgba(20,32,51,.09); }
-    .paper-figure-media { display:flex; align-items:center; justify-content:center; min-height:255px; height:315px; padding:1rem; background:linear-gradient(180deg,#fff 0%,#fbfcff 100%); border-bottom:1px solid var(--line); text-decoration:none; }
-    .paper-figure-media img { display:block; width:100%; height:100%; object-fit:contain; }
-    .paper-figure-copy { display:flex; flex:1; flex-direction:column; align-items:flex-start; padding:1.1rem 1.2rem 1.2rem; }
-    .paper-figure-number { color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.68rem; font-weight:850; }
-    .paper-figure-copy h4 { margin:.35rem 0 .45rem; font-size:1.03rem; font-weight:850; line-height:1.4; }
-    .paper-figure-copy p { margin:0; color:var(--muted); font-size:.88rem; line-height:1.65; }
-    .figure-source { display:inline-flex; align-items:center; gap:.35rem; margin-top:auto; padding-top:.85rem; color:var(--accent); font-size:.8rem; font-weight:800; text-decoration:none; }
+    /* One-at-a-time paper figure viewer. */
+    .fig-viewer { margin-top:2rem; overflow:hidden; border:1px solid var(--line); border-radius:18px; background:#fff; box-shadow:0 7px 24px rgba(20,32,51,.045); }
+    .fig-viewer:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+    .fig-toolbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; padding:.8rem 1.25rem; border-bottom:1px solid var(--line); background:#fbfcff; }
+    .fig-viewer:not(.is-ready) .fig-toolbar { display:none; }
+    .fig-count { color:var(--muted); font-size:.82rem; font-weight:600; font-variant-numeric:tabular-nums; }
+    .fig-dots { display:flex; align-items:center; gap:.45rem; }
+    .fig-dot { width:8px; height:8px; padding:0; border:0; border-radius:99px; background:#cfd7e6; cursor:pointer; transition:width .2s ease,background .2s ease; }
+    .fig-dot:hover { background:#9fb0d6; }
+    .fig-dot[aria-current="true"] { width:22px; background:var(--accent); }
+    .fig-buttons { display:flex; gap:.5rem; }
+    .fig-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .95rem; border:1px solid #d8deea; border-radius:99px; background:#fff; color:var(--ink); font:600 .85rem Inter,system-ui,sans-serif; cursor:pointer; transition:border-color .15s ease,color .15s ease; }
+    .fig-btn:hover { border-color:var(--accent); color:var(--accent); }
+    .fig-btn:focus-visible,.fig-dot:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .fig-slide { margin:0; }
+    .fig-viewer:not(.is-ready) .fig-slide + .fig-slide { border-top:1px solid var(--line); }
+    .fig-viewer.is-ready .fig-slide:not(.is-active) { display:none; }
+    .fig-slide-media { display:flex; align-items:center; justify-content:center; height:clamp(220px,44vw,480px); padding:1.25rem; background:#fff; border-bottom:1px solid var(--line); }
+    .fig-slide-media img { display:block; width:100%; height:100%; object-fit:contain; }
+    .fig-slide figcaption { padding:1.25rem 1.4rem 1.4rem; }
+    .fig-meta { color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.68rem; font-weight:800; }
+    .fig-slide h4 { margin:.35rem 0 .45rem; font-size:1.12rem; font-weight:800; line-height:1.4; }
+    .fig-caption { margin:0; color:var(--muted); font-size:.92rem; line-height:1.7; max-width:880px; }
+    .fig-inference { margin-top:1rem; padding:.9rem 1.1rem; border-left:3px solid var(--accent2); border-radius:0 10px 10px 0; background:#f2faf9; max-width:880px; }
+    .fig-inference strong { display:block; margin-bottom:.3rem; color:#14766f; font-size:.7rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+    .fig-inference p { margin:0; color:#2f4d4b; font-size:.9rem; line-height:1.7; }
+    .figure-source { display:inline-flex; align-items:center; gap:.35rem; margin-top:.9rem; color:var(--accent); font-size:.8rem; font-weight:700; text-decoration:none; }
     .figure-source:hover { text-decoration:underline; }
-    .figure-gallery-note { margin-top:1.2rem; padding:.9rem 1.05rem; border:1px solid #e2e8f5; border-radius:12px; background:#f8faff; color:#5c687b; font-size:.82rem; line-height:1.65; }
-    @media(max-width:760px) {
-      .paper-figure-grid { grid-template-columns:1fr; }
-      .paper-figure-media { height:auto; min-height:210px; aspect-ratio:16/9; padding:.75rem; }
-      .paper-figure-card:hover { transform:none; }
+    @media(max-width:560px) {
+      .fig-toolbar { padding:.7rem 1rem; }
+      .fig-dots { order:3; width:100%; justify-content:center; }
+      .fig-btn-label { display:none; }
+      .fig-slide-media { padding:.75rem; }
+      .fig-slide figcaption { padding:1rem; }
     }
 
 
@@ -122,7 +140,9 @@
     .measurement-formula { padding:1.25rem; border:1px solid #dfe6f5; border-radius:16px; background:#fff; }
     .measurement-formula .formula-label { display:block; color:var(--accent); font-size:.7rem; font-weight:850; letter-spacing:.1em; text-transform:uppercase; }
     .measurement-formula h3 { margin:.4rem 0 .45rem; font-size:1rem; font-weight:850; }
-    .measurement-equation { margin:.75rem 0; padding:.85rem 1rem; border-radius:10px; background:#111b2b; color:#f1f5ff; font:700 .95rem ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .measurement-equation { margin:.75rem 0; padding:.35rem .75rem; min-height:4.2rem; display:flex; align-items:center; justify-content:center; border:1px solid #e3e9f5; border-radius:10px; background:#f8faff; color:var(--ink); font-size:1.02rem; overflow-x:auto; overflow-y:hidden; }
+    .measurement-equation .katex-display { margin:.5rem 0; }
+    .equation-note { margin-top:.6rem; color:var(--muted); font-size:.82rem; line-height:1.6; }
     .measurement-formula p { margin:0; color:var(--muted); font-size:.83rem; line-height:1.65; }
     .measurement-caveat { margin-top:1.2rem; padding:1rem 1.15rem; border-left:4px solid #d58b43; border-radius:0 12px 12px 0; background:#fff8ee; color:#76532d; font-size:.84rem; line-height:1.7; }
     .measurement-foot { margin-top:1rem; color:var(--muted); font-size:.8rem; line-height:1.65; }
@@ -272,14 +292,14 @@
       <a class="brand" href="#top">Forecast<span>Power</span>Bench</a>
       <div class="nav-links">
         <a href="#overview">Overview</a>
-        <a href="#methodology">Methodology</a>
-        <a href="#measurement-setup">Measurement setup</a>
+        <a href="#methodology">Metrics</a>
+        <a href="#measurement-setup">Protocol</a>
         <a href="#workloads">Workloads</a>
         <a href="#findings">Findings</a>
-        <a href="#ranker">Results explorer</a>
+        <a href="#ranker">Explorer</a>
         <a href="#efficiency-map">Efficiency map</a>
-        <a href="#results">Results</a>
-        <a href="#reproducibility">Reproducibility</a>
+        <a href="#results">Figures</a>
+        <a href="#reproducibility">Reproduce</a>
       </div>
     </nav>
   </header>
@@ -297,7 +317,7 @@
         <div class="hero-actions">
           <!-- Replace placeholder URLs with the public resources when available. -->
           <a class="button primary is-medium is-rounded" href="#results">Explore benchmark results</a>
-          <a class="button secondary is-medium is-rounded" href="https://github.com/" target="_blank" rel="noopener"> <span aria-hidden="true">↗</span>&nbsp; Code and data</a>
+          <a class="button secondary is-medium is-rounded" href="https://anonymous.4open.science/r/ForecastPowerbench-C810" target="_blank" rel="noopener"> <span aria-hidden="true">↗</span>&nbsp; Code and data</a>
           <a class="button secondary is-medium is-rounded" href="static/pdfs/forecastpowerbench_paper.pdf">Read the paper</a>
         </div>
         <div style="margin-top:2rem">
@@ -311,8 +331,8 @@
 
     <section class="section-pad" id="overview">
       <div class="section-wrap">
-        <div class="section-kicker">Why this benchmark?</div>
-        <h2 class="section-title">Accuracy alone does not tell the whole story.</h2>
+        <div class="section-kicker">Overview</div>
+        <h2 class="section-title">Accuracy alone does not tell the whole story</h2>
         <p class="section-intro">
           Forecasting accuracy is only one part of deployment suitability. ForecastPowerBench evaluates 10 time-series foundation models across four NVIDIA platforms, measuring how context length, forecast horizon, batch size, and hardware affect inference throughput, energy per forecast, memory use, and feasibility.
         </p>
@@ -338,8 +358,8 @@
 
     <section class="section-pad section-soft" id="methodology">
       <div class="section-wrap">
-        <div class="section-kicker">Measurement framework</div>
-        <h2 class="section-title">What does ForecastPowerBench measure?</h2>
+        <div class="section-kicker">Metrics</div>
+        <h2 class="section-title">What ForecastPowerBench measures</h2>
         <p class="section-intro">ForecastPowerBench combines software-instrumented inference measurements with GPU-device telemetry. Throughput and timing are measured around the benchmark execution path; energy is reported from the GPU power domain only, not as whole-machine or wall-plug energy.</p>
         <div class="metric-grid">
           <div class="metric"><strong>Throughput</strong><span>Forecast windows processed per second; optionally report forecast points per second.</span></div>
@@ -354,7 +374,7 @@
           <div class="info-card">
             <h3>Energy per Forecast</h3>
             <p>EPF is the GPU-reported energy consumed during the timed inference interval, normalized by the number of forecast windows completed in that interval.</p>
-            <div class="code-box" style="margin-top:1rem">EPF (J/window) = E_GPU / N_windows</div>
+            <div class="measurement-equation" style="margin-top:1rem">\[\mathrm{EPF}\ [\mathrm{J/forecast}] = \frac{E_{\mathrm{GPU}}}{N_{\mathrm{forecast}}}\]</div>
           </div>
           <div class="info-card">
             <h3>Fair comparisons</h3>
@@ -365,20 +385,20 @@
     </section>
 
     
-<section class="section-pad section-soft" id="measurement-setup">
+<section class="section-pad" id="measurement-setup">
   <div class="section-wrap">
-    <div class="section-kicker">Experimental setup · Measurement protocol</div>
+    <div class="section-kicker">Measurement protocol</div>
     <h2 class="section-title">How each inference run is measured</h2>
     <p class="section-intro measurement-intro">
-      Each run fixes a model, GPU, context length, forecast horizon, and batch size.
-      Warm-up is excluded; software counters and GPU telemetry are collected during inference.
+      Each run fixes a model, GPU, context length, forecast horizon, and batch size. Two warm-up rounds are
+      excluded, then five measurement rounds of 300 inference batches each are timed while GPU telemetry is sampled.
     </p>
 
     <figure class="measurement-overview">
       <img src="static/images/overview.png"
            alt="Gantt-style measurement timeline showing initialization, excluded warm-up, measured inference, concurrent GPU monitoring, and metric computation"
            loading="lazy" decoding="async">
-      <figcaption>Measurement timeline for one model–workload–hardware configuration. The measured interval begins after warm-up and ends when the timed inference work is complete.</figcaption>
+      <figcaption>Measurement timeline for one model–workload–hardware configuration. The measured interval begins after warm-up and ends when the timed inference work is complete. Memory is reported in GB in all results on this page.</figcaption>
     </figure>
 
     <div class="measurement-scope-banner">
@@ -398,28 +418,28 @@
       <article class="measurement-step">
         <span class="measurement-step-no">02</span>
         <h3>Warm up</h3>
-        <p>Run warm-up iterations before measurement; exclude them from metrics.</p>
+        <p>Run two warm-up rounds (CUDA/JIT initialization); they are excluded from all metrics.</p>
       </article>
       <article class="measurement-step">
         <span class="measurement-step-no">03</span>
         <h3>Measure</h3>
-        <p>Time inference, count completed windows, and sample GPU telemetry concurrently.</p>
+        <p>Run five measurement rounds of 300 inference batches each, counting completed forecasts and sampling GPU telemetry.</p>
       </article>
       <article class="measurement-step">
         <span class="measurement-step-no">04</span>
         <h3>Aggregate</h3>
-        <p>Repeat runs and calculate throughput, EPF, and peak memory.</p>
+        <p>Aggregate across the five rounds to report throughput, EPF, and peak memory.</p>
       </article>
     </div>
 
     <div class="measurement-detail-grid">
       <article class="measurement-detail">
         <h3>Software counters</h3>
-        <p>The benchmark records elapsed time and completed forecast windows. Model-call timing and pipeline overhead are retained separately where available.</p>
+        <p>Each model runs with its native implementation and author-recommended inference procedure. Timing and energy cover only the forecasting phase; model-specific preprocessing and input construction are excluded. Elapsed time and completed forecasts are recorded for each round.</p>
       </article>
       <article class="measurement-detail">
         <h3>Concurrent telemetry</h3>
-        <p>PyNVML collects GPU power, memory, and utilization; psutil records CPU/process memory. Only GPU power contributes to EPF.</p>
+        <p>NVML samples GPU power, memory, GPU and SM utilization, clock frequency, and temperature every 50&nbsp;ms. GPU energy is obtained by integrating the sampled power trace with the trapezoidal rule. psutil records CPU/process memory. Only GPU power contributes to EPF.</p>
       </article>
     </div>
 
@@ -427,20 +447,20 @@
       <article class="measurement-formula">
         <span class="formula-label">Performance</span>
         <h3>Throughput</h3>
-        <div class="measurement-equation">T = N_windows / T_measurement</div>
-        <p>Completed forecast windows per second over the measured interval.</p>
+        <div class="measurement-equation">\[T = \frac{N_{\mathrm{forecast}}}{t_1 - t_w}\]</div>
+        <p>Completed forecast windows \(N_{\mathrm{forecast}}\) per second over the measured interval \([t_w, t_1]\), in forecasts/s.</p>
       </article>
       <article class="measurement-formula">
         <span class="formula-label">GPU energy</span>
         <h3>Energy per Forecast</h3>
-        <div class="measurement-equation">EPF = E_GPU / N_windows</div>
-        <p><em>E</em><sub>GPU</sub> is the time-integral of sampled GPU power; EPF is reported in J/window.</p>
+        <div class="measurement-equation">\[\mathrm{EPF} = \frac{1}{N_{\mathrm{forecast}}}\int_{t_w}^{t_1} P_{\mathrm{GPU}}(t)\,dt\]</div>
+        <p>GPU energy \(E_{\mathrm{GPU}}\), the trapezoidal integral of GPU power \(P_{\mathrm{GPU}}\) sampled every 50&nbsp;ms, divided by completed forecasts. Reported in J/forecast.</p>
       </article>
       <article class="measurement-formula">
         <span class="formula-label">Memory</span>
         <h3>Peak GPU memory</h3>
-        <div class="measurement-equation">M_peak = max M_GPU(t)</div>
-        <p>Maximum observed GPU memory during the measured inference interval.</p>
+        <div class="measurement-equation">\[M_{\mathrm{peak}} = \max_{t \in [t_w,\,t_1]} M_{\mathrm{GPU}}(t)\]</div>
+        <p>Maximum observed GPU memory during the measured inference interval, in GB.</p>
       </article>
     </div>
 
@@ -453,8 +473,8 @@
 
 <section class="section-pad setup-future" id="workloads">
   <div class="section-wrap">
-    <div class="section-kicker">Experimental design · Current setup</div>
-    <h2 class="section-title">Workload space</h2>
+    <div class="section-kicker">Experimental design</div>
+    <h2 class="section-title">The benchmark workload space</h2>
     <p class="section-intro">
       The benchmark covers 10 TSFMs and four NVIDIA platforms. The workload grid contains
       7 context lengths × 9 forecast horizons = 63 context–horizon pairs, where supported.
@@ -493,7 +513,7 @@
         <article class="setup-stat">
           <span class="setup-stat-index">05 / HARDWARE</span>
           <strong>4 <i>platforms</i></strong>
-          <p>Cloud, workstation, and edge deployments</p>
+          <p>Cloud (H100 SXM 80GB), workstation (RTX 5090, RTX A6000), and edge (Jetson AGX Orin)</p>
           <div class="setup-device-row"><span>H100</span><span>RTX 5090</span><span>RTX A6000</span><span>AGX Orin</span></div>
         </article>
         <article class="setup-stat setup-stat-highlight">
@@ -513,23 +533,34 @@
       </div>
     </div>
     <p class="setup-footnote">Configurations unsupported by a model or exceeding available memory are treated as feasibility limits, not as valid measurements.</p>
+    <p class="setup-footnote">* In the current release, the 63 context–horizon pairs are measured at batch size 512, and the batch-size sweep (1–4,096) is run at context length 512 and horizon 96. Results for other batch sizes across the full context–horizon grid will be added as future work.</p>
   </div>
 </section>
 
     <section class="section-pad section-soft" id="findings">
       <div class="section-wrap">
-        <div class="section-kicker">Research questions</div>
+        <div class="section-kicker">Key findings</div>
         <h2 class="section-title">What the experiments reveal</h2>
         <div class="grid-2">
           <article class="info-card">
-            <div class="icon-box">RQ1</div>
+            <div class="icon-box">01</div>
             <h3>Workload scaling is model-dependent</h3>
-            <p>Increasing context length generally reduces throughput, but the magnitude varies widely. Longer horizons can cause sharp degradation for some models, while others remain comparatively stable.</p>
+            <p>Increasing context length generally reduces throughput, but the magnitude varies widely. Longer horizons cause sharp degradation for some models, while others remain comparatively stable. Performance at a single workload configuration is therefore not enough to characterize deployment behavior.</p>
           </article>
           <article class="info-card">
-            <div class="icon-box">RQ2</div>
-            <h3>Size alone does not predict efficiency</h3>
-            <p>Models with different parameter counts show distinct throughput, energy, and memory requirements. Deployment choices need measured system performance, workload sensitivity, and feasibility—not model size or architecture labels alone.</p>
+            <div class="icon-box">02</div>
+            <h3>Smaller models are not necessarily faster or more efficient</h3>
+            <p>Models with fewer parameters do not consistently achieve higher throughput or lower EPF, and models in the same architectural family can have very different system costs. Model size and architecture labels are no substitute for measuring throughput and energy under representative workloads.</p>
+          </article>
+          <article class="info-card">
+            <div class="icon-box">03</div>
+            <h3>Accuracy–efficiency trade-offs depend on the forecasting regime</h3>
+            <p>No single model is optimal across all workloads. The Pareto-optimal models change with the regime: Moirai-2 and Kairos for Short, TTM-R3, Sundial, and Chronos-2 for Medium, and TTM-R3 and Chronos-2 for Long.</p>
+          </article>
+          <article class="info-card">
+            <div class="icon-box">04</div>
+            <h3>Hardware shapes efficiency and operating points</h3>
+            <p>Broad scaling trends often persist across platforms, but absolute throughput, EPF, and feasible operating points vary with hardware, and some models cannot run the largest workloads within device memory. A configuration that performs well on a cloud GPU may not stay optimal on workstation or edge hardware.</p>
           </article>
         </div>
         <div class="callout">
@@ -538,9 +569,9 @@
       </div>
     </section>
 
-    <section class="section-pad section-soft" id="ranker">
+    <section class="section-pad" id="ranker">
       <div class="section-wrap">
-        <div class="section-kicker">Benchmark explorer</div>
+        <div class="section-kicker">Results explorer</div>
         <h2 class="section-title">Compare model efficiency for a workload</h2>
         <p class="section-intro">Choose a context length and forecast horizon to compare available models by throughput and energy per forecast (EPF). The visualizer reads the published JSON result files directly; rankings update when you change the workload or hardware.</p>
         <div class="ranker-shell">
@@ -553,7 +584,7 @@
             <div class="ranker-field"><label for="ranker-device">Hardware platform</label><select id="ranker-device"><option value="">Loading platforms…</option></select></div>
             <div class="ranker-field"><label for="ranker-context">Context length</label><select id="ranker-context"><option value="">Loading contexts…</option></select></div>
             <div class="ranker-field"><label for="ranker-horizon">Forecast horizon</label><select id="ranker-horizon"><option value="">Loading horizons…</option></select></div>
-            <div class="ranker-field"><label for="ranker-batch">Batch size</label><select id="ranker-batch"><option value="">Loading batch sizes…</option></select></div>
+            <div class="ranker-field"><label for="ranker-batch">Batch size <span style="font-weight:500;color:var(--muted)">512 only for now*</span></label><select id="ranker-batch"><option value="">Loading batch sizes…</option></select></div>
           </div>
           <div class="ranker-results">
             <div class="ranker-summary" id="ranker-summary"><div class="ranker-chip">Loading JSON results…</div></div>
@@ -569,7 +600,7 @@
                 <div id="epf-chart" class="ranking-chart"><p class="ranker-note">Loading EPF data…</p></div>
               </article>
             </div>
-            <div class="ranker-table-wrap" style="margin-top:1.25rem"><table class="ranker-table"><thead><tr><th>Model</th><th>Throughput rank</th><th>Throughput (windows/s)</th><th>EPF rank</th><th>EPF (J/forecast)</th><th>Peak GPU memory (GB)</th></tr></thead><tbody id="ranker-table-body"><tr><td colspan="6">Loading data…</td></tr></tbody></table></div>
+            <div class="ranker-table-wrap" style="margin-top:1.25rem"><table class="ranker-table"><thead><tr><th>Model</th><th>Throughput rank</th><th>Throughput (forecasts/s)</th><th>EPF rank</th><th>EPF (J/forecast)</th><th>Peak GPU memory (GB)</th></tr></thead><tbody id="ranker-table-body"><tr><td colspan="6">Loading data…</td></tr></tbody></table></div>
             <section class="alpha-ranker" aria-labelledby="alpha-ranking-title">
               <div class="alpha-heading">
                 <div>
@@ -594,20 +625,20 @@
                   </table>
                 </div>
                 <div id="alpha-status" class="ranker-status" role="status" aria-live="polite">Composite ranking combines hardware-specific throughput with representative GIFT-Eval accuracy.</div>
-                <p class="ranker-note">Throughput is min–max normalized (higher is better); MASE is normalized in reverse (lower is better). MASE is aggregated once per model for each broad Short/Medium/Long regime. For every selected workload, the visualizer assigns the nearest regime anchor using both context length and horizon (normalized log-distance), then reuses that regime-level MASE across the corresponding workload region. It is a representative accuracy reference, not an exact per-workload score; accuracy can vary with domain, dataset, and sampling frequency. Throughput remains specific to the selected hardware and workload.</p>
+                <p class="ranker-note">Throughput is min–max normalized (higher is better); MASE is normalized in reverse (lower is better). MASE is aggregated once per model for each broad Short/Medium/Long regime. As in the paper, the regime is chosen from the selected forecast horizon using GIFT-Eval horizon families: Short (H ≤ 48), Medium (48 &lt; H ≤ 480), and Long (480 &lt; H ≤ 720). The context length does not affect the accuracy reference. It is a representative accuracy reference, not an exact per-workload score; accuracy can vary with domain, dataset, and sampling frequency. Throughput remains specific to the selected hardware and workload.</p>
               </div>
             </section>
             <div id="ranker-status" class="ranker-status" role="status" aria-live="polite">Loading JSON result files from the manifest.</div>
-            <p class="ranker-note">Rankings are calculated separately for each metric and selected workload. Models missing a measurement for the selected hardware, context, horizon, or batch size are not included. EPF uses the energy-per-window field provided by each result file.</p>
+            <p class="ranker-note">Rankings are calculated separately for each metric and selected workload. Models missing a measurement for the selected hardware, context, horizon, or batch size are not included. EPF uses the energy-per-forecast field provided by each result file.</p>
           </div>
         </div>
       </div>
     </section>
 
 
-<section class="section-pad" id="efficiency-map">
+<section class="section-pad section-soft" id="efficiency-map">
   <div class="section-wrap">
-    <div class="section-kicker">Interactive leaderboard</div>
+    <div class="section-kicker">Efficiency map</div>
     <h2 class="section-title">Throughput–energy efficiency map</h2>
     <p class="section-intro">Explore the trade-off between throughput and Energy per Forecast (EPF) for each model. Each point represents one model under the selected hardware and forecasting workload. The upper-left region is preferable: lower energy per forecast and higher throughput.</p>
     <div class="eff-map-shell">
@@ -641,112 +672,120 @@
 
 <section class="section-pad" id="results">
   <div class="section-wrap">
-    <div class="section-kicker">Results from the paper · Interactive figure gallery</div>
+    <div class="section-kicker">Paper figures</div>
     <h2 class="section-title">Workload and hardware shape inference efficiency</h2>
     <p class="section-intro">
-      Explore six vector figures from ForecastPowerBench. The H100 heatmaps show how workload dimensions
-      affect throughput, energy, and memory; the final comparisons extend the view across hardware and
-      batch-size configurations. Select any plot to open its full-resolution SVG.
+      Six figures from the ForecastPowerBench paper. The four H100 heatmaps show how context length and forecast
+      horizon affect throughput, energy, and memory; the last two compare models across hardware platforms and
+      batch sizes. Use the buttons or the arrow keys to move between figures, and select a figure to open the full-resolution SVG.
     </p>
 
-    <div class="paper-figure-group">
-      <div class="paper-figure-group-heading">
-        <div>
-          <h3>Workload sensitivity · NVIDIA H100</h3>
-          <p>Four complementary views of context-length and forecast-horizon scaling.</p>
+    <div class="fig-viewer" id="fig-viewer" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Paper figures">
+      <div class="fig-toolbar">
+        <span class="fig-count" id="fig-count" aria-live="polite">Figure 1 of 6</span>
+        <div class="fig-dots" id="fig-dots"></div>
+        <div class="fig-buttons">
+          <button type="button" class="fig-btn" data-fig="prev" aria-label="Previous figure"><span aria-hidden="true">←</span><span class="fig-btn-label">Previous</span></button>
+          <button type="button" class="fig-btn" data-fig="next" aria-label="Next figure"><span class="fig-btn-label">Next</span><span aria-hidden="true">→</span></button>
         </div>
-        <span class="pill">4 workload heatmaps</span>
       </div>
 
-      <div class="paper-figure-grid">
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 absolute throughput heatmap in full size">
-            <img src="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" alt="Absolute throughput heatmap across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">H100 · Workload scaling</span>
-            <h4>Absolute throughput</h4>
-            <p>Forecast-window throughput across the evaluated context-length and forecast-horizon configurations.</p>
-            <a class="figure-source" href="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 absolute throughput heatmap in full size">
+          <img src="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" alt="Heatmaps of absolute throughput for ten models across context lengths and forecast horizons on NVIDIA H100" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">NVIDIA H100 · Workload scaling</span>
+          <h4>Absolute throughput</h4>
+          <p class="fig-caption">Throughput (thousand forecasts per second) at batch size 512 for each model across 7 context lengths (rows) and 9 forecast horizons (columns). Higher is better.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>Throughput spans more than two orders of magnitude across models, from about 55k forecasts/s (Moirai-2 at short context and horizon) to under 1.5k for TempoPFN and TiRex. Moirai-2 is fastest for horizons up to 48 but falls sharply beyond 96, while TTM-R3 holds about 12–50k forecasts/s across the whole grid. Kairos, Sundial, and TiRex are largely insensitive to context length.</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/h100_absolute_throughput_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
 
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/h100_absolute_energy_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 absolute energy heatmap in full size">
-            <img src="static/images/paper_figures/h100_absolute_energy_heatmap.svg" alt="Absolute energy per forecast heatmap across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">H100 · Energy cost</span>
-            <h4>Energy per forecast</h4>
-            <p>Energy consumed per forecast window, exposing how inference energy changes with workload size.</p>
-            <a class="figure-source" href="static/images/paper_figures/h100_absolute_energy_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/h100_absolute_energy_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 energy per forecast heatmap in full size">
+          <img src="static/images/paper_figures/h100_absolute_energy_heatmap.svg" alt="Heatmaps of energy per forecast for ten models across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">NVIDIA H100 · Energy cost</span>
+          <h4>Energy per forecast</h4>
+          <p class="fig-caption">GPU energy per forecast window (J/forecast) at batch size 512 across the same context-length and forecast-horizon grid. Lower is better.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>TTM-R3, Kairos, and Toto stay at or below about 0.16 J/forecast across the entire grid. TiRex and Moirai-2 become far more expensive as the horizon grows: TiRex reaches about 7.7 J at horizon 720, and Moirai-2 reaches 6.6 J at context 2,048 and horizon 720. For FlowState and TempoPFN, energy grows mainly with context length.</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/h100_absolute_energy_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
 
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/h100_absolute_memory_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 absolute memory heatmap in full size">
-            <img src="static/images/paper_figures/h100_absolute_memory_heatmap.svg" alt="Absolute GPU memory heatmap across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">H100 · Memory footprint</span>
-            <h4>Peak GPU memory</h4>
-            <p>Peak memory use across forecasting workloads, highlighting the resource demands of different configurations.</p>
-            <a class="figure-source" href="static/images/paper_figures/h100_absolute_memory_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/h100_absolute_memory_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 peak memory heatmap in full size">
+          <img src="static/images/paper_figures/h100_absolute_memory_heatmap.svg" alt="Heatmaps of peak GPU memory for ten models across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">NVIDIA H100 · Memory footprint</span>
+          <h4>Peak GPU memory</h4>
+          <p class="fig-caption">Peak GPU memory (GB) observed during inference at batch size 512 for each context-length and forecast-horizon configuration.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>Memory needs range from about 0.1 GB (TTM-R3, and Moirai-2 at short horizons) to 53 GB (FlowState at context 2,048). FlowState and TempoPFN grow steeply with context length; TempoPFN needs 36 GB at context 2,048, and its longer horizons at that context are not reported. TiRex and Kairos stay at about 1 GB across the grid, which makes them easier to fit on memory-constrained devices.</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/h100_absolute_memory_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
 
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/h100_relative_throughput_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 relative throughput heatmap in full size">
-            <img src="static/images/paper_figures/h100_relative_throughput_heatmap.svg" alt="Relative throughput heatmap across context lengths and forecast horizons on NVIDIA H100" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">H100 · Normalized scaling</span>
-            <h4>Relative throughput</h4>
-            <p>Normalized throughput reveals workload sensitivity separately from absolute differences in model speed.</p>
-            <a class="figure-source" href="static/images/paper_figures/h100_relative_throughput_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
-      </div>
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/h100_relative_throughput_heatmap.svg" target="_blank" rel="noopener" aria-label="Open H100 relative throughput heatmap in full size">
+          <img src="static/images/paper_figures/h100_relative_throughput_heatmap.svg" alt="Heatmaps of throughput relative to each model's best configuration on NVIDIA H100" loading="lazy" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">NVIDIA H100 · Normalized scaling</span>
+          <h4>Relative throughput</h4>
+          <p class="fig-caption">Throughput at batch size 512 as a percentage of each model's own best configuration, so workload sensitivity can be compared independently of raw speed.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>Sensitivity differs as much as raw speed does. Sundial keeps at least 45% of its peak everywhere, and Kairos keeps at least 65% for horizons up to 96. TiRex does not depend on context but drops in steps as the horizon grows (to 4% at 720). Moirai-2 is the most horizon-sensitive (3% or less beyond 360), while Chronos-2 and FlowState degrade mainly with context (7–12% at 2,048).</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/h100_relative_throughput_heatmap.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
+
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/combined_per_device_throughput_energy.svg" target="_blank" rel="noopener" aria-label="Open cross-device throughput and energy figure in full size">
+          <img src="static/images/paper_figures/combined_per_device_throughput_energy.svg" alt="Throughput and energy per forecast versus batch size for ten models on four hardware platforms" loading="lazy" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">Cross-platform · Batch-size scaling</span>
+          <h4>Throughput and energy across devices</h4>
+          <p class="fig-caption">Throughput (top) and energy per forecast (bottom) as a function of batch size (1 to 4,096) on Jetson AGX Orin, NVIDIA H100, RTX 5090, and RTX A6000, for context length 512 and horizon 96. Both axes are logarithmic.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>On every platform, throughput rises almost linearly with batch size until it levels off at a point that depends on the model and the device, and EPF falls as a mirror image. TTM-R3 leads at small batches; Kairos keeps scaling the longest and reaches the lowest EPF at the largest batches. TiRex has the highest EPF throughout. Peak throughput on the Jetson AGX Orin is more than an order of magnitude below the H100.</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/combined_per_device_throughput_energy.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
+
+      <figure class="fig-slide" aria-roledescription="slide">
+        <a class="fig-slide-media" href="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" target="_blank" rel="noopener" aria-label="Open batch 512 throughput and EPF panels in full size">
+          <img src="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" alt="Energy per forecast versus throughput at batch size 512 for short-, medium-, and long-term forecasts, with marker size showing model size" loading="lazy" decoding="async">
+        </a>
+        <figcaption>
+          <span class="fig-meta">Batch size 512 · Forecast regimes</span>
+          <h4>Throughput vs. EPF at batch size 512</h4>
+          <p class="fig-caption">Energy per forecast versus throughput on the NVIDIA H100 at batch size 512 for short (context 512, horizon 48), medium (1,024, 360), and long (2,048, 720) workloads. Marker size shows parameter count. The throughput axis is reversed, so faster models appear further left.</p>
+          <div class="fig-inference">
+            <strong>What it shows</strong>
+            <p>Model size does not predict efficiency. For short-term forecasts, Moirai-2 (11.4M) is fastest and, with Kairos (23M), uses the least energy, but Moirai-2 moves toward the slow, high-energy corner for medium- and long-term forecasts. TTM-R3 (1.4M) leads in the medium and long regimes, while the 200M-parameter TimesFM 2.5 sits mid-pack. TiRex (35M) and TempoPFN (38M) are consistently among the slowest and most energy-intensive.</p>
+          </div>
+          <a class="figure-source" href="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
+        </figcaption>
+      </figure>
     </div>
-
-    <div class="paper-figure-group">
-      <div class="paper-figure-group-heading">
-        <div>
-          <h3>Hardware and batch-size comparisons</h3>
-          <p>System-level comparisons beyond a single device or workload slice.</p>
-        </div>
-        <span class="pill">2 comparison figures</span>
-      </div>
-
-      <div class="paper-figure-grid">
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/combined_per_device_throughput_energy.svg" target="_blank" rel="noopener" aria-label="Open cross-device throughput and energy figure in full size">
-            <img src="static/images/paper_figures/combined_per_device_throughput_energy.svg" alt="Combined comparison of throughput and energy across benchmark devices" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">Cross-platform evaluation</span>
-            <h4>Throughput and energy across devices</h4>
-            <p>Compare the throughput and energy behavior of the evaluated models across the benchmark hardware platforms.</p>
-            <a class="figure-source" href="static/images/paper_figures/combined_per_device_throughput_energy.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
-
-        <figure class="paper-figure-card">
-          <a class="paper-figure-media" href="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" target="_blank" rel="noopener" aria-label="Open batch 512 throughput and EPF panels in full size">
-            <img src="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" alt="Throughput and energy per forecast comparison in vertical panels at batch size 512" loading="lazy" decoding="async">
-          </a>
-          <figcaption class="paper-figure-copy">
-            <span class="paper-figure-number">Batch-size scaling · 512</span>
-            <h4>Throughput and EPF at batch size 512</h4>
-            <p>Side-by-side system-efficiency views for the batch-512 workload comparison.</p>
-            <a class="figure-source" href="static/images/paper_figures/batch512_throughput_epf_vertical_panels.svg" target="_blank" rel="noopener">Open full-size SVG <span aria-hidden="true">↗</span></a>
-          </figcaption>
-        </figure>
-      </div>
-    </div>
-
-    <p class="figure-gallery-note">
-    </p>
   </div>
 </section>
 
@@ -759,7 +798,7 @@
           <article class="info-card">
             <h3>Code</h3>
             <p>Publish the benchmarking code, model adapters, launch scripts, telemetry collectors, and environment instructions.</p>
-            <p><a href="https://github.com/" target="_blank" rel="noopener">Open repository ↗</a></p>
+            <p><a href="https://anonymous.4open.science/r/ForecastPowerbench-C810" target="_blank" rel="noopener">Open repository ↗</a></p>
           </article>
           <article class="info-card">
             <h3>Results and metadata</h3>
@@ -774,7 +813,7 @@
         </div>
         <h3 style="font-size:1.2rem;font-weight:800;margin-top:2.4rem">Cite ForecastPowerBench</h3>
         <p style="color:var(--muted);line-height:1.7">Citation details hidden for peer review.</p>
-        <pre class="code-box"><code>@inproceedings{forecastpowerbench,
+        <pre class="code-box"><code id="citation-bibtex">@inproceedings{forecastpowerbench,
   title     = {ForecastPowerBench: Benchmarking Performance, Energy, and Scaling Behavior of Time-Series Foundation Model Inference},
   author    = {Anonymous},
   booktitle = {Preprint},
@@ -790,19 +829,57 @@
   <footer class="footer">
     <div class="footer-wrap">
       <div><strong>ForecastPowerBench</strong><br>Workload-aware evaluation of time-series foundation model efficiency.</div>
-      <div>Built for transparency and reproducibility. <a href="https://github.com/">Source code</a></div>
+      <div>Built for transparency and reproducibility. <a href="https://anonymous.4open.science/r/ForecastPowerbench-C810" target="_blank" rel="noopener">Source code</a></div>
     </div>
   </footer>
   <script src="static/js/ranker.js" defer></script>
   <script>
+    // Paper figure viewer: one figure at a time with previous/next, dots, and arrow keys.
+    (function () {
+      const viewer = document.getElementById('fig-viewer');
+      if (!viewer) return;
+      const slides = Array.from(viewer.querySelectorAll('.fig-slide'));
+      const dotsWrap = document.getElementById('fig-dots');
+      const count = document.getElementById('fig-count');
+      let current = 0;
+
+      const dots = slides.map((slide, k) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'fig-dot';
+        dot.setAttribute('aria-label', 'Show figure ' + (k + 1) + ': ' + slide.querySelector('h4').textContent);
+        dot.addEventListener('click', () => show(k));
+        dotsWrap.appendChild(dot);
+        return dot;
+      });
+
+      function show(k) {
+        current = (k + slides.length) % slides.length;
+        slides.forEach((slide, n) => {
+          slide.classList.toggle('is-active', n === current);
+          slide.setAttribute('aria-hidden', n === current ? 'false' : 'true');
+        });
+        dots.forEach((dot, n) => dot.setAttribute('aria-current', n === current ? 'true' : 'false'));
+        count.textContent = 'Figure ' + (current + 1) + ' of ' + slides.length;
+        // Warm up the next image so the following click feels instant.
+        const nextImg = slides[(current + 1) % slides.length].querySelector('img');
+        if (nextImg) nextImg.loading = 'eager';
+      }
+
+      viewer.querySelector('[data-fig="prev"]').addEventListener('click', () => show(current - 1));
+      viewer.querySelector('[data-fig="next"]').addEventListener('click', () => show(current + 1));
+      viewer.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); show(current + 1); }
+      });
+
+      viewer.classList.add('is-ready');
+      show(0);
+    })();
+
     function copyCitation() {
-      const citation = `@inproceedings{forecastpowerbench,
-  title     = {ForecastPowerBench: Benchmarking the Inference Efficiency of Time Series Foundation Models},
-  author    = {ForecastPowerBench authors},
-  booktitle = {Preprint},
-  year      = {2026},
-  url       = {ForecastPowerBench project page}
-}`;
+      // Copy exactly the BibTeX shown on the page so the two never drift apart.
+      const citation = document.getElementById('citation-bibtex').textContent;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(citation).then(() => {
           document.getElementById('copy-status').textContent = 'Citation copied.';

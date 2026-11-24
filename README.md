@@ -1,32 +1,21 @@
-# ForecastPowerBench project page + interactive ranker
+# ForecastPowerBench
 
-## Files
-- `index.html`: landing page and embedded ranking widget UI.
-- `static/js/ranker.js`: loads CSV files and recalculates model ranks as alpha/filters change.
-- `data/merged_system_metrics.csv`: **add your merged CSV** containing model identity, workload/hardware fields, and accuracy metrics (e.g. MASE).
-- `data/raw_system_metrics.csv`: **add your raw system-metrics CSV** containing model/workload fields and raw or per-run efficiency measurements.
+**Benchmarking Performance, Energy, and Scaling Behavior of Time-Series Foundation Model Inference**
 
-## Deploy on GitHub Pages
-1. Copy this folder's contents into the root of your GitHub Pages repository (or adjust paths if you keep the site in a subfolder).
-2. Add your two CSV files to `data/` using the filenames above, or change `FPB_MERGED_CSV` and `FPB_RAW_CSV` at the top of `static/js/ranker.js`.
-3. Commit and push. The widget fetches CSVs from the same site origin; it will not load correctly by opening `index.html` with a `file://` URL.
+Forecasting accuracy alone does not determine whether a time-series foundation model (TSFM) is suitable for deployment. ForecastPowerBench is a workload-aware benchmark that measures how **context length**, **forecast horizon**, and **batch size** affect TSFM **throughput**, **memory**, **power**, and **Energy per Forecast (EPF)** across hardware platforms. It combines these measurements with GIFT-Eval accuracy scores to study accuracy–efficiency trade-offs.
 
-## Expected CSV fields
-The ranker recognizes common aliases, including:
-- Identity: `model_name`, `device_category` or `execution_device`, `context_len`, `horizon_len`, `batch_size`.
-- Accuracy: `MASE`, `MAPE`, `MAE`, `RMSE`, `SMAPE` (lower is better).
-- Throughput: `throughput_windows_per_sec_mean` or `throughput_points_per_sec_mean` (higher is better).
-- Energy: `energy_per_window_j_mean` or `energy_per_forecast_j` (lower is better). If unavailable, it can calculate energy per forecast from total energy divided by forecast count when those columns are present.
-- Memory: `peak_gpu_memory_used_gb_mean` or a compatible peak-memory field (lower is better).
+- **Models:** 10 TSFMs: Chronos-2, FlowState, Kairos, Moirai-2, Sundial, TempoPFN, TiRex, TimesFM 2.5, Toto, TTM-R3
+- **Hardware:** NVIDIA H100, RTX 5090, RTX A6000, Jetson AGX Orin
+- **Workloads:** 7 context lengths × 9 forecast horizons, plus batch sizes from 1 to 4,096
 
-The merged CSV supplies accuracy and model/workload metadata. Raw CSV rows are preferred for the selected efficiency measurement; the merged CSV is used as a fallback when no raw efficiency value is available for that model. Model matching is by the model name string, and selected workload filters are applied to both files.
+**Code:** <https://anonymous.4open.science/r/ForecastPowerbench-C810>
 
-## Score
-`score = alpha * efficiency_utility + (1 - alpha) * accuracy_utility`
+## This repository
 
-Each utility is min-max normalized within the currently selected comparison set, with lower-is-better metrics inverted. At alpha 0, the score ranks by accuracy utility; at alpha 1, it ranks by the selected efficiency utility. When filters are set to “All”, metrics are averaged over the matching rows; for rigorous comparisons, select one hardware/context/horizon/batch configuration. The ranker excludes models missing either selected accuracy or efficiency values.
+This repository is the project website: an interactive results explorer, an efficiency map, and the paper's figures.
 
-## Important
-- Ensure accuracy values correspond to the selected forecasting workload. If accuracy is only available for short/medium/long GIFT-Eval regimes, map those records to the corresponding workload points or add an accuracy-regime selector before comparing.
-- Do not publish sensitive raw telemetry or excessively large files. For very large raw data, prepare a compact per-run or per-configuration CSV for the browser widget and offer the full data separately as a download.
-- If the site is hosted under a repository subpath, use relative paths that match that deployment structure.
+```bash
+python3 -m http.server 8000   # then open http://localhost:8000
+```
+
+Measurement data is stored in `data/results/`, and every file must be listed in `data/results-index.json`. See [`JSON_DATA_LAYOUT.md`](JSON_DATA_LAYOUT.md) for the schema.
