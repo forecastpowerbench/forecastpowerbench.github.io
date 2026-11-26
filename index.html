@@ -618,7 +618,7 @@
                   </table>
                 </div>
                 <div id="alpha-status" class="ranker-status" role="status" aria-live="polite">Composite ranking combines hardware-specific throughput with representative GIFT-Eval accuracy.</div>
-                <p class="ranker-note">Throughput is min–max normalized (higher is better); MASE is normalized in reverse (lower is better). MASE is aggregated once per model for each broad Short/Medium/Long regime. As in the paper, the regime is chosen from the selected forecast horizon using GIFT-Eval horizon families: Short (H ≤ 48), Medium (48 &lt; H ≤ 480), and Long (480 &lt; H ≤ 720). The context length does not affect the accuracy reference. It is a representative accuracy reference, not an exact per-workload score; accuracy can vary with domain, dataset, and sampling frequency. Throughput remains specific to the selected hardware and workload.</p>
+                <p class="ranker-note">Throughput is min–max normalized (higher is better); MASE is normalized in reverse (lower is better). MASE is aggregated once per model for each broad Short/Medium/Long regime. The regime is chosen from the selected forecast horizon using GIFT-Eval horizon families: Short (H ≤ 48), Medium (48 &lt; H ≤ 480), and Long (480 &lt; H ≤ 720). It is a representative accuracy reference, not an exact per-workload score; accuracy can vary with domain, dataset, and sampling frequency. Throughput remains specific to the selected hardware and workload.</p>
               </div>
             </section>
             <div id="ranker-status" class="ranker-status" role="status" aria-live="polite">Loading JSON result files from the manifest.</div>
